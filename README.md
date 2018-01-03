@@ -11,3 +11,12 @@ Fully supported types: int32, string
 Partially supported types: boolean
 
 Partially realisation: switch-case, code transfer
+
+
+Added, not tested:
+
+Type: float64
+
+Commands: conv_r8 div mul sub ldc_r8
+
+Changed commands: add

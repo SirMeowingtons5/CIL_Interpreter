@@ -1,4 +1,5 @@
 import CIL.Command
+import kotlin.math.absoluteValue
 
 fun main(args: Array<String>){
 
@@ -97,9 +98,15 @@ fun testSwitch(cil : CIL.Interpreter, prog : Array<Command>){
             }
             //
             "add"       -> cil.add()
+            "div"       -> cil.div()
+            "mul"       -> cil.mul()
+            "sub"       -> cil.sub()
+            //
             "ceq"       -> cil.ceq()
             "cgt"       -> cil.cgt()
             "clt"       -> cil.clt()
+            //
+            "conv.r8"   -> cil.conv_r8()
             //ldc_i4
             "ldc.i4",
             "ldc.i4.s"  -> cil.ldc_i4(cmd.argument.toInt())
@@ -113,6 +120,7 @@ fun testSwitch(cil : CIL.Interpreter, prog : Array<Command>){
             "ldc.i4.7"  -> cil.ldc_i4(7)
             "ldc.i4.8"  -> cil.ldc_i4(8)
             "ldc.i4.M1" -> cil.ldc_i4(-1)
+            "ldc.r8"    -> cil.ldc_r8(cmd.argument.toDouble())
             //ldloc
             "ldloc",
             "ldloc.s"   -> cil.ldloc(cmd.argument.toInt())

@@ -14,9 +14,77 @@ class Interpreter(maxStack : Int, maxLocals : Int){
      * Adds two values and pushes the result onto the evaluation stack.
      */
     fun add(){
-        val value2 = _stack.pop() as Int
-        val value1 = _stack.pop() as Int
-        _stack.push(value1 + value2)
+        var value2 : Any = _stack.pop()
+        var value1 : Any = _stack.pop()
+
+        //both are int
+        if (value1 is Int && value2 is Int){
+            _stack.push(value1 + value2)
+            //one is double so result is double
+        }else{
+            if (value1 is Int){
+                value1 = value1.toDouble()
+            }
+            if (value2 is Int)
+                value2 = value2.toDouble()
+            _stack.push(value1 as Double + value2 as Double)
+        }
+    }
+
+    /**
+     * Divides two values to return a floating-point result.
+     */
+    fun div(){
+        val value2 : Double
+        val value1 : Double
+        if (_stack.peek() is Int)
+            value2 = (_stack.pop() as Int).toDouble()
+        else
+            value2 = _stack.pop() as Double
+        if (_stack.peek() is Int)
+            value1 = (_stack.pop() as Int).toDouble()
+        else
+            value1 = _stack.pop() as Double
+        _stack.push(value1 / value2)
+    }
+
+    /**
+     * Multiplies two values on the stack.
+     */
+    fun mul(){
+        var value2 : Any = _stack.pop()
+        var value1 : Any = _stack.pop()
+
+        //both are int
+        if (value1 is Int && value2 is Int){
+            _stack.push(value1 * value2)
+        //one is double so result is double
+        }else{
+            if (value1 is Int){
+                value1 = value1.toDouble()
+            }
+            if (value2 is Int)
+                value2 = value2.toDouble()
+            _stack.push(value1 as Double * value2 as Double)
+        }
+    }
+
+    fun sub(){
+        var value2 : Any = _stack.pop()
+        var value1 : Any = _stack.pop()
+
+        //both are int
+        if (value1 is Int && value2 is Int){
+            _stack.push(value2 - value1)
+            //one is double so result is double
+        }else{
+            if (value1 is Int){
+                value1 = value1.toDouble()
+            }
+            if (value2 is Int)
+                value2 = value2.toDouble()
+            _stack.push(value2 as Double - value1 as Double)
+        }
     }
 
     /**
@@ -61,10 +129,27 @@ class Interpreter(maxStack : Int, maxLocals : Int){
         else
             _stack.push(0)
     }
+
+    /**
+     * Converts the value on top of the evaluation stack to float64.
+     */
+    fun conv_r8(){
+        val value = _stack.pop()
+        if (value is Int){
+            _stack.push(value.toDouble())
+        }else{
+            _stack.push(value)
+        }
+    }
+
+
     /**
      * Pushes a supplied value of type int32 onto the evaluation stack as an int32.
      */
     fun ldc_i4(value: Int){
+        _stack.push(value)
+    }
+    fun ldc_r8(value: Double){
         _stack.push(value)
     }
 
@@ -94,6 +179,9 @@ class Interpreter(maxStack : Int, maxLocals : Int){
         when (funcName){
             "[mscorlib]System.Console::WriteLine(int32)" ->{
                 println((_stack.pop() as Int).toString())
+            }
+            "[mscorlib]System.Console::WriteLine(float64)" ->{
+                println((_stack.pop() as Double).toString())
             }
             "[mscorlib]System.Console::WriteLine(string)" ->{
                 val index = (_stack.pop() as Pointer).getIndex()
