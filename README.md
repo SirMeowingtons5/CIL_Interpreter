@@ -1,6 +1,6 @@
 Done: Stack, heap
 
-Fully supported commands: add clt ldc.i4 ldstr ldloc stloc
+Fully supported commands: add ceq cgt clt ldc.i4 ldstr ldloc stloc
 
 Fully supported transfer commands: beq bge bgt ble blt br brtrue brfalse
 

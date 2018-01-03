@@ -19,6 +19,40 @@ class Interpreter(maxStack : Int, maxLocals : Int){
         _stack.push(value1 + value2)
     }
 
+    /**
+     * Compares two values.
+     * If they are equal, the integer value 1 is pushed onto the evaluation stack;
+     * otherwise 0 is pushed onto the evaluation stack.
+     */
+    fun ceq(){
+        val value2 = _stack.pop()
+        val value1 = _stack.pop()
+        if (value2.equals(value1))
+            _stack.push(1)
+        else
+            _stack.push(0)
+
+    }
+
+    /**
+     * Compares two values.
+     * If the first value is greater than the second, the integer value 1 is pushed onto the evaluation stack;
+     * otherwise 0 is pushed onto the evaluation stack.
+     */
+    fun cgt(){
+        val value2 = _stack.pop() as Int
+        val value1 = _stack.pop() as Int
+        if (value1 > value2)
+            _stack.push(1)
+        else
+            _stack.push(0)
+    }
+
+    /**
+     * Compares two values.
+     * If the first value is less than the second, the integer value 1 is pushed onto the evaluation stack;
+     * otherwise 0 is pushed onto the evaluation stack.
+     */
     fun clt(){
         val value2 = _stack.pop() as Int
         val value1 = _stack.pop() as Int

@@ -1,7 +1,7 @@
 import CIL.Command
 
 fun main(args: Array<String>){
-    test2()
+
 }
 
 fun test(){
@@ -97,6 +97,8 @@ fun testSwitch(cil : CIL.Interpreter, prog : Array<Command>){
             }
             //
             "add"       -> cil.add()
+            "ceq"       -> cil.ceq()
+            "cgt"       -> cil.cgt()
             "clt"       -> cil.clt()
             //ldc_i4
             "ldc.i4",
