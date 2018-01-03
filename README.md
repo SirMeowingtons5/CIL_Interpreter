@@ -1,17 +1,13 @@
-Done:
-Stack, heap
+Done: Stack, heap
 
-Fully Commands:
-ldc_i4
-ldstr
-ldloc
-stloc
+Fully supported commands: add clt ldc.i4 ldstr ldloc stloc
 
-Partially Commands:
-call
-ret
+Fully supported transfer commands: beq bge bgt ble blt br brtrue brfalse
 
-Partially realisation:
-switch-case
+Partially supported commands: call ret
 
+Fully supported types: int32, string
 
+Partially supported types: boolean
+
+Partially realisation: switch-case, code transfer

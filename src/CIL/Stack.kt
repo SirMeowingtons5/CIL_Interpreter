@@ -8,14 +8,6 @@ class Stack(maxStack : Int){
         _maxPointer = maxStack - 1
     }
 
-    /*
-    fun push(item : Int){
-        //TODO: реализовать эксепшн
-        if (_pointer == _maxPointer)
-            throw Exception("StackOverflowException")
-        _stack[++_pointer] = item
-    }
-    */
     fun push(item : Any){
         //TODO: реализовать эксепшн
         if (_pointer == _maxPointer)

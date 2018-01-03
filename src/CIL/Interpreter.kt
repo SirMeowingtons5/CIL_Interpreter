@@ -11,9 +11,26 @@ class Interpreter(maxStack : Int, maxLocals : Int){
     }
 
     /**
+     * Adds two values and pushes the result onto the evaluation stack.
+     */
+    fun add(){
+        val value2 = _stack.pop() as Int
+        val value1 = _stack.pop() as Int
+        _stack.push(value1 + value2)
+    }
+
+    fun clt(){
+        val value2 = _stack.pop() as Int
+        val value1 = _stack.pop() as Int
+        if (value1 < value2)
+            _stack.push(1)
+        else
+            _stack.push(0)
+    }
+    /**
      * Pushes a supplied value of type int32 onto the evaluation stack as an int32.
      */
-    fun ldc_I4(value: Int){
+    fun ldc_i4(value: Int){
         _stack.push(value)
     }
 
@@ -80,6 +97,70 @@ class Interpreter(maxStack : Int, maxLocals : Int){
 
     }
 
+    /*
+     *
+     * Переходы
+     *
+     */
+
+    /**
+     * Transfers control to a target instruction if two values are equal.
+     */
+    fun beq() : Boolean{
+        val value2 = _stack.pop() as Int
+        val value1 = _stack.pop() as Int
+        return value1.equals(value2)
+    }
+
+    /**
+     * Transfers control to a target instruction if the first value is greater than or equal to the second value.
+     */
+    fun bge() : Boolean{
+        val value2 = _stack.pop() as Int
+        val value1 = _stack.pop() as Int
+        return (value1 >= value2)
+    }
+
+    /**
+     * Transfers control to a target instruction if the first value is greater than the second value.
+     */
+    fun bgt() : Boolean{
+        val value2 = _stack.pop() as Int
+        val value1 = _stack.pop() as Int
+        return (value1 > value2)
+    }
+
+    /**
+     * Transfers control to a target instruction if the first value is less than or equal to the second value.
+     */
+    fun ble() : Boolean{
+        val value2 = _stack.pop() as Int
+        val value1 = _stack.pop() as Int
+        return (value1 <= value2)
+    }
+
+    /**
+     * Transfers control to a target instruction if the first value is less than the second value.
+     */
+    fun blt() : Boolean{
+        val value2 = _stack.pop() as Int
+        val value1 = _stack.pop() as Int
+        return (value1 < value2)
+    }
+
+    /**
+     * Transfers control to a target instruction if value is true, not null, or non-zero.
+     */
+    fun brtrue() : Boolean{
+        return (_stack.pop() as Int != 0)
+    }
+
+    /**
+     * Transfers control to a target instruction if value is false, a null reference, or zero.
+     */
+    fun brfalse() : Boolean{
+        return (_stack.pop() as Int == 0)
+    }
 
     /**
      * Класс-обёртка для указателя
