@@ -1,7 +1,7 @@
 # CIL Interpreter
 CIL Interpreter is a simple Kotlin app that can interpret basic CIL commands
 
-##Supported types
+## Supported types
 - int32
 - float64
 - string
