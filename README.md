@@ -1,22 +1,43 @@
-Done: Stack, heap
+# CIL Interpreter
+CIL Interpreter is a simple Kotlin app that can interpret basic CIL commands
 
-Fully supported commands: add ceq cgt clt ldc.i4 ldstr ldloc stloc
+##Supported types
+- int32
+- float64
+- string
 
-Fully supported transfer commands: beq bge bgt ble blt br brtrue brfalse
+## Supported commands 
+### Math operations:
+- add 
+- sub
+- mul
+- div (result is float64 only)
 
-Partially supported commands: call ret
+### Transfer:
+- beq
+- bge
+- bgt
+- ble
+- blt
+- br
+- brtrue
+- brfalse
 
-Fully supported types: int32, string
+### Comparing:
+- ceq
+- cgt
+- clt
 
-Partially supported types: boolean
+### Adding values:
+- ldc.i4
+- ldc.r8
+- ldstr
 
-Partially realisation: switch-case, code transfer
+### Local variables:
+- stloc
+- ldloc
 
-
-Added, not tested:
-
-Type: float64
-
-Commands: conv_r8 div mul sub ldc_r8
-
-Changed commands: add
+### Partially supported:
+- call (WriteLine, ReadLine)
+- ret
+- conv.r8 (convers int32 to float64)
