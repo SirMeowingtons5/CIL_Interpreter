@@ -1,6 +1,9 @@
 # CIL Interpreter
 CIL Interpreter is a simple Kotlin app that can interpret basic CIL commands
 
+## Known bugs:
+- Closing curve bracket ("}") symbol in ldstr argument may cause exception
+
 ## Supported types
 - int32
 - float64
