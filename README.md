@@ -1,6 +1,15 @@
 # CIL Interpreter
 CIL Interpreter is a simple Kotlin app that can interpret basic CIL commands
 
+## How to start
+- Download project
+- Create ildasm directory in project root folder
+- Place ILDASM executable in ildasm folder
+- Run project
+- Input file to exe
+- ???
+- Profit!
+
 ## Known bugs:
 - Closing curve bracket ("}") symbol in ldstr argument may cause exception
 
@@ -41,6 +50,6 @@ CIL Interpreter is a simple Kotlin app that can interpret basic CIL commands
 - ldloc
 
 ### Partially supported:
-- call (WriteLine, ReadLine)
+- call (WriteLine, ReadLine, Concat)
 - ret
 - conv.r8 (convers int32 to float64)

@@ -161,8 +161,9 @@ class Interpreter(maxStack : Int, maxLocals : Int){
     }
 
     fun ldstr(value : String){
+        val parsedValue = value.removePrefix("\"").removeSuffix("\"")
         _stack.push(Pointer(_heap.size))
-        _heap.add(value)
+        _heap.add(parsedValue)
     }
     /**
      * Pops the current value from the top of the evaluation stack
@@ -197,6 +198,12 @@ class Interpreter(maxStack : Int, maxLocals : Int){
             "string [mscorlib]System.Console::ReadLine()" ->{
                 //TODO: чекнуть
                 ldstr(readLine() ?: "всё сломалось, зовите фиксиков")
+            }
+            "string [mscorlib]System.String::Concat(string," ->{
+                val value2 = _stack.pop() as Pointer
+                val value1 = _stack.pop() as Pointer
+                val res = _heap.get(value1.getIndex()) as String + _heap.get(value2.getIndex()) as String
+                ldstr(res)
             }
         }
     }
