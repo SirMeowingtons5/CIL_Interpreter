@@ -1,0 +1,4 @@
+package CIL
+
+class Class {
+}

@@ -1,4 +1,4 @@
-package CIL
+package cil
 class Stack(maxStack : Int){
     private val _stack : Array<Any>
     private var _pointer = -1
@@ -9,7 +9,6 @@ class Stack(maxStack : Int){
     }
 
     fun push(item : Any){
-        //TODO: реализовать эксепшн
         if (_pointer == _maxPointer)
             throw Exception("StackOverflowException")
         _stack[++_pointer] = item

@@ -1,14 +1,14 @@
-import ILDASM.Converter
-import ILDASM.Parser
-
+import cil.Instance
+import ildasm.Parser
 
 fun main(args: Array<String>){
-    println("Input .exe file location")
-    val filePath = readLine()
-    val c = Converter()
-    val cil = c.convert(filePath ?: "D:\\IdeaProjects\\CIL_Interpreter\\ildasm\\app.exe")
+    val path = System.getProperty("user.dir")+"\\test\\extending.txt"
+    val parser = Parser()
+    parser.parse(path)
+
     println("cil>>STARTING")
-    cil.run()
+    Instance.run()
     println("cil>>FINISHED")
+
 }
 

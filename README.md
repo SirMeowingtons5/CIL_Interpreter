@@ -6,7 +6,7 @@ CIL Interpreter is a simple Kotlin app that can interpret basic CIL commands
 - Create ildasm directory in project root folder
 - Place ILDASM executable in ildasm folder
 - Run project
-- Input file to exe
+- Input path to exe
 - ???
 - Profit!
 

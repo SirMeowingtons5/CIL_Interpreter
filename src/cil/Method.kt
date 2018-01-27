@@ -1,7 +1,8 @@
 package CIL
 
     val maxOperations = 0x100
-class Interpreter(maxStack : Int, maxLocals : Int){
+class Interpreter(maxStack : Int, maxLocals : Int, methodName : String){
+    public val name : String
     private val _stack : Stack
     private val _heap = ArrayList<Any>()
     private val _locals : Array<Any>
@@ -11,6 +12,7 @@ class Interpreter(maxStack : Int, maxLocals : Int){
         _stack = Stack(maxStack)
         _locals = Array(maxLocals, {0})
         _commands = Array(maxOperations, { Command("nop") })
+        name = methodName
     }
 
     fun addCommand (index : Int, command : Command){
@@ -20,7 +22,7 @@ class Interpreter(maxStack : Int, maxLocals : Int){
     /**
      * Adds two values and pushes the result onto the evaluation stack.
      */
-    fun add(){
+    private fun add(){
         var value2 : Any = _stack.pop()
         var value1 : Any = _stack.pop()
 
@@ -41,7 +43,7 @@ class Interpreter(maxStack : Int, maxLocals : Int){
     /**
      * Divides two values to return a floating-point result.
      */
-    fun div(){
+    private fun div(){
         val value2 : Double
         val value1 : Double
         if (_stack.peek() is Int)
@@ -58,7 +60,7 @@ class Interpreter(maxStack : Int, maxLocals : Int){
     /**
      * Multiplies two values on the stack.
      */
-    fun mul(){
+    private fun mul(){
         var value2 : Any = _stack.pop()
         var value1 : Any = _stack.pop()
 
@@ -76,7 +78,7 @@ class Interpreter(maxStack : Int, maxLocals : Int){
         }
     }
 
-    fun sub(){
+    private fun sub(){
         var value2 : Any = _stack.pop()
         var value1 : Any = _stack.pop()
 
@@ -99,7 +101,7 @@ class Interpreter(maxStack : Int, maxLocals : Int){
      * If they are equal, the integer value 1 is pushed onto the evaluation stack;
      * otherwise 0 is pushed onto the evaluation stack.
      */
-    fun ceq(){
+    private fun ceq(){
         val value2 = _stack.pop()
         val value1 = _stack.pop()
         if (value2.equals(value1))
@@ -114,7 +116,7 @@ class Interpreter(maxStack : Int, maxLocals : Int){
      * If the first value is greater than the second, the integer value 1 is pushed onto the evaluation stack;
      * otherwise 0 is pushed onto the evaluation stack.
      */
-    fun cgt(){
+    private fun cgt(){
         val value2 = _stack.pop() as Int
         val value1 = _stack.pop() as Int
         if (value1 > value2)
@@ -128,7 +130,7 @@ class Interpreter(maxStack : Int, maxLocals : Int){
      * If the first value is less than the second, the integer value 1 is pushed onto the evaluation stack;
      * otherwise 0 is pushed onto the evaluation stack.
      */
-    fun clt(){
+    private fun clt(){
         val value2 = _stack.pop() as Int
         val value1 = _stack.pop() as Int
         if (value1 < value2)
@@ -140,7 +142,7 @@ class Interpreter(maxStack : Int, maxLocals : Int){
     /**
      * Converts the value on top of the evaluation stack to float64.
      */
-    fun conv_r8(){
+    private fun conv_r8(){
         val value = _stack.pop()
         if (value is Int){
             _stack.push(value.toDouble())
@@ -153,14 +155,14 @@ class Interpreter(maxStack : Int, maxLocals : Int){
     /**
      * Pushes a supplied value of type int32 onto the evaluation stack as an int32.
      */
-    fun ldc_i4(value: Int){
+    private fun ldc_i4(value: Int){
         _stack.push(value)
     }
-    fun ldc_r8(value: Double){
+    private fun ldc_r8(value: Double){
         _stack.push(value)
     }
 
-    fun ldstr(value : String){
+    private fun ldstr(value : String){
         val parsedValue = value.removePrefix("\"").removeSuffix("\"")
         _stack.push(Pointer(_heap.size))
         _heap.add(parsedValue)
@@ -169,21 +171,21 @@ class Interpreter(maxStack : Int, maxLocals : Int){
      * Pops the current value from the top of the evaluation stack
      * and stores it in a the local variable list at a specified index.
      */
-    fun stloc(index: Int){
+    private fun stloc(index: Int){
         _locals[index] = _stack.pop()
     }
 
     /**
      * Loads the local variable at a specific index onto the evaluation stack.
      */
-    fun ldloc(index: Int){
+    private fun ldloc(index: Int){
         _stack.push(_locals[index])
     }
 
     /**
      * Calls the method indicated by the passed method descriptor.
      */
-    fun call(funcName : String){
+    private fun call(funcName : String){
         when (funcName){
             "void [mscorlib]System.Console::WriteLine(int32)" ->{
                 println((_stack.pop() as Int).toString())
@@ -211,7 +213,7 @@ class Interpreter(maxStack : Int, maxLocals : Int){
     /**
      * Removes the value currently on top of the evaluation stack.
      */
-    fun pop() : Any{
+    private fun pop() : Any{
         return _stack.pop()
     }
 
@@ -219,7 +221,7 @@ class Interpreter(maxStack : Int, maxLocals : Int){
      * Returns from the current method, pushing a return value (if present)
      * from the callee's evaluation stack onto the caller's evaluation stack.
      */
-    fun ret() : Any?{
+    private fun ret() : Any?{
         //TODO: реализовать
         if (_stack.isEmpty())
             return null
@@ -229,7 +231,7 @@ class Interpreter(maxStack : Int, maxLocals : Int){
     /**
      * Fills space if opcodes are patched. No meaningful operation is performed
      */
-    fun nop(){
+    private fun nop(){
 
     }
 
@@ -242,7 +244,7 @@ class Interpreter(maxStack : Int, maxLocals : Int){
     /**
      * Transfers control to a target instruction if two values are equal.
      */
-    fun beq() : Boolean{
+    private fun beq() : Boolean{
         val value2 = _stack.pop() as Int
         val value1 = _stack.pop() as Int
         return value1.equals(value2)
@@ -251,7 +253,7 @@ class Interpreter(maxStack : Int, maxLocals : Int){
     /**
      * Transfers control to a target instruction if the first value is greater than or equal to the second value.
      */
-    fun bge() : Boolean{
+    private fun bge() : Boolean{
         val value2 = _stack.pop() as Int
         val value1 = _stack.pop() as Int
         return (value1 >= value2)
@@ -260,7 +262,7 @@ class Interpreter(maxStack : Int, maxLocals : Int){
     /**
      * Transfers control to a target instruction if the first value is greater than the second value.
      */
-    fun bgt() : Boolean{
+    private fun bgt() : Boolean{
         val value2 = _stack.pop() as Int
         val value1 = _stack.pop() as Int
         return (value1 > value2)
@@ -269,7 +271,7 @@ class Interpreter(maxStack : Int, maxLocals : Int){
     /**
      * Transfers control to a target instruction if the first value is less than or equal to the second value.
      */
-    fun ble() : Boolean{
+    private fun ble() : Boolean{
         val value2 = _stack.pop() as Int
         val value1 = _stack.pop() as Int
         return (value1 <= value2)
@@ -278,7 +280,7 @@ class Interpreter(maxStack : Int, maxLocals : Int){
     /**
      * Transfers control to a target instruction if the first value is less than the second value.
      */
-    fun blt() : Boolean{
+    private fun blt() : Boolean{
         val value2 = _stack.pop() as Int
         val value1 = _stack.pop() as Int
         return (value1 < value2)
@@ -287,14 +289,14 @@ class Interpreter(maxStack : Int, maxLocals : Int){
     /**
      * Transfers control to a target instruction if value is true, not null, or non-zero.
      */
-    fun brtrue() : Boolean{
+    private fun brtrue() : Boolean{
         return (_stack.pop() as Int != 0)
     }
 
     /**
      * Transfers control to a target instruction if value is false, a null reference, or zero.
      */
-    fun brfalse() : Boolean{
+    private fun brfalse() : Boolean{
         return (_stack.pop() as Int == 0)
     }
 
