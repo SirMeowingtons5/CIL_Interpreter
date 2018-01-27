@@ -38,6 +38,8 @@ class Parser{
      * group 3 - (optional) command argument (needs whitespace trimming at start)
      * group 4 - (optional) multiline command argument (need whitespaces trimming, see realisation)
      */
+
+    //TODO: fix for 3+ args
     private val commandRegex = Regex(
             "IL_([\\da-f]*):\\s+([\\w.]*)(.*)(\r\n\\s*\\w*\\))*",
             RegexOption.MULTILINE)
@@ -72,7 +74,7 @@ class Parser{
             val cls = cil.Class(it.groupValues[2])
             //adding fields
             fieldRegex.findAll(it.groupValues[4]).forEach {
-                cls.addField(it.groupValues[1])
+                cls.addField("${cls.name}::${it.groupValues[1]}")
             }
             //adding methods
             methodRegex.findAll(it.groupValues[4]).forEach {
@@ -82,7 +84,7 @@ class Parser{
                         .replace(Regex("\\w+$"), "")
                         .replace(Regex("\\s+\\w+,"), ",")
                         .trim()
-                val methodName = "${it.groupValues[4]}($args)"
+                val methodName = "${cls.name}::${it.groupValues[4]}($args)"
                 val maxStack = maxstackRegex.find(it.groupValues[6])?.groupValues?.get(1)?.toInt() ?: 0
                 val localsSequence = localsRegex.findAll(it.groupValues[6])
                 val maxLocals = if (localsSequence.count() > 0){
@@ -103,10 +105,13 @@ class Parser{
                     method.addCommand(index, command)
                 }
                 if (it.groupValues[6].contains(entrypointRegex)){
-                    println("entrypoint at ${cls.name}::${method.name}")
+                    println("entrypoint at ${method.name}")
                     Instance.setEntryMethod(method)
                 }
                 cls.addMethod(method)
+            }
+            if(it.groupValues[3] != "[mscorlib]System.Object") {
+                cls.extend(it.groupValues[3])
             }
             Instance.addClass(cls.name, cls)
         }

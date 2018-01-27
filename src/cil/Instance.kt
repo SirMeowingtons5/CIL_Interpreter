@@ -3,6 +3,7 @@ package cil
 object Instance{
     private var entryMethod : Method = Method(0, 0, "DULL", Class("DULL"))
     private val _classes = HashMap<String, Class>()
+    val heap = ArrayList<Any>()
 
     fun setEntryMethod(value : Method){
         entryMethod = value
@@ -10,7 +11,12 @@ object Instance{
     fun addClass(name : String, value : Class){
         _classes.put(name, value)
     }
+    fun getClass(name : String) : Class{
+        return _classes[name]!!
+    }
     fun run(){
-        entryMethod.run()
+        //starting args are not supported (yet)
+        val emptyList = ArrayList<Any>()
+        entryMethod.run(ArrayList<Any>())
     }
 }

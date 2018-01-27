@@ -2,10 +2,15 @@ package cil
 
 
 class Method(private val maxStack : Int, private val maxLocals : Int, val name : String,
-             private val parentClass : Class){
+             private var classInstance: Class){
+
+
+
+
+
     private val _maxOperations = 0x100
     private val _stack : Stack = Stack(maxStack)
-    private val _heap = ArrayList<Any>()
+    //private val _heap = ArrayList<Any>()
     private val _locals : Array<Any> = Array(maxLocals, {0})
     private val _commands : Array<Command>
 
@@ -17,8 +22,11 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
      * Returns new instance of Method
      * Further realisation for static methods
      */
+    fun setClassInstance(instance : Class){
+        classInstance = instance
+    }
     fun create() : Method{
-        val res = Method(maxStack, maxLocals, name, parentClass)
+        val res = Method(maxStack, maxLocals, name, classInstance)
         res.setCommands(_commands)
         return res
     }
@@ -174,8 +182,47 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
 
     private fun ldstr(value : String){
         val parsedValue = value.removePrefix("\"").removeSuffix("\"")
-        _stack.push(Pointer(_heap.size))
-        _heap.add(parsedValue)
+        if (Instance.heap.contains(parsedValue)){
+            _stack.push(Instance.heap.indexOf(parsedValue))
+        }else {
+            _stack.push(Pointer(Instance.heap.size))
+            Instance.heap.add(parsedValue)
+        }
+    }
+    private fun ldarg_0(){
+        if (Instance.heap.contains(classInstance)) {
+            _stack.push(Instance.heap.indexOf(classInstance))
+        }else {
+            _stack.push(Instance.heap.size)
+            Instance.heap.add(classInstance)
+        }
+    }
+    private fun stfld(name : String){
+        val fieldName = name.substringAfterLast(" ")
+        classInstance.stfld(fieldName, _stack.pop())
+    }
+    private fun ldfld(name : String){
+        val fieldName = name.substringAfterLast(" ")
+        _stack.push(classInstance.ldfld(fieldName))
+    }
+
+    private fun newobj(arg : String){
+        val className = arg.substringBefore("::").substringAfterLast(" ")
+        val methodName = arg.substringAfterLast(" ")
+        val argsNumber : Int
+        if (methodName.substringAfter("(").substringBefore(")").length == 0) {
+            argsNumber = 0
+        }else{
+            //get number of args by couting commas, +1 cause 0 commas means 1 arg, 1 comma means 2 args etc.
+            argsNumber = methodName
+                    .substringBefore("(").substringAfter(")").split(",").size
+
+        }
+        val args = ArrayList<Any>()
+        for (i in 1..argsNumber){
+            args.add(_stack.pop())
+        }
+        _stack.push(Instance.getClass(className).create().call(methodName, args)!!)
     }
     /**
      * Pops the current value from the top of the evaluation stack
@@ -205,18 +252,56 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
             }
             "void [mscorlib]System.Console::WriteLine(string)" ->{
                 val index = (_stack.pop() as Pointer).getIndex()
-                println(_heap.get(index) as String)
+                println(Instance.heap.get(index) as String)
             }
             "string [mscorlib]System.Console::ReadLine()" ->{
                 //TODO: чекнуть
+                print("cil>>READLINE:")
                 ldstr(readLine() ?: "всё сломалось, зовите фиксиков")
             }
-            "string [mscorlib]System.String::Concat(string," ->{
+            "string [mscorlib]System.String::Concat(string, string)" ->{
                 val value2 = _stack.pop() as Pointer
                 val value1 = _stack.pop() as Pointer
-                val res = _heap.get(value1.getIndex()) as String + _heap.get(value2.getIndex()) as String
+                val res = Instance.heap.get(value1.getIndex()) as String +
+                        Instance.heap.get(value2.getIndex()) as String
                 ldstr(res)
             }
+            "instance void [mscorlib]System.Object::.ctor()" ->{
+                //do nothing
+            }
+            else ->{
+                //same implementation
+                callvirt(funcName)
+            }
+
+        }
+    }
+    private fun callvirt(arg : String){
+        val methodName = arg.substringAfterLast(" ")
+        val argsNumber : Int
+        if (methodName.substringAfter("(").substringBefore(")").length == 0) {
+            argsNumber = 0
+        }else{
+            //get number of args by couting commas, +1 cause 0 commas means 1 arg, 1 comma means 2 args etc.
+            argsNumber = methodName
+                    .substringBefore("(").substringAfter(")").split(",").size
+
+        }
+        val args = ArrayList<Any>()
+        for (i in 1..argsNumber){
+            args.add(_stack.pop())
+        }
+        //val pointer = _stack.pop() as Pointer
+        val pointer = _stack.pop() as Int
+        try {
+            val res = (Instance.heap[pointer] as Class).callvirt(methodName, args)
+        }catch (e : Exception){
+            //DAFUQ?!
+            //println("ERROR: ${Instance.heap[pointer]}")
+        }
+        val res = 1
+        if (res != null && !arg.substringBeforeLast(" ").contains("void")){
+            _stack.push(res)
         }
     }
 
@@ -327,11 +412,15 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
     /**
      * Метод-интерпретатор
      */
-    fun run(){
+    fun run(args : ArrayList<Any>) : Any?{
         var pos = 0
         while (pos < _maxOperations){
             val cmd = _commands[pos]
             pos++
+            //TODO: remove
+            if(cmd.operation != "nop") {
+                //println("$pos ${cmd.operation} ${cmd.argument} [${_stack.storedNum()}/$maxStack]")
+            }
             when (cmd.operation){
                 "nop"       -> nop()
             //transfers
@@ -403,6 +492,8 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
                 "ldc.i4.8"  -> ldc_i4(8)
                 "ldc.i4.M1" -> ldc_i4(-1)
                 "ldc.r8"    -> ldc_r8(cmd.argument.toDouble())
+            //newobj
+                "newobj"    -> newobj(cmd.argument)
             //ldloc
                 "ldloc",
                 "ldloc.s"   -> ldloc(cmd.argument.toInt())
@@ -412,6 +503,14 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
                 "ldloc.3"   -> ldloc(3)
             //
                 "ldstr"     -> ldstr(cmd.argument)
+            //ldarg0 == "this" keyword
+                "ldarg.0"   -> ldarg_0()
+                "ldarg.1"   -> _stack.push(args[0])
+                "ldarg.2"   -> _stack.push(args[1])
+                "ldarg.3"   -> _stack.push(args[2])
+                "ldarg"     -> _stack.push(args[cmd.argument.toInt()-1])
+                "ldarga",
+                "ldargs"    -> _stack.push(args[cmd.argument.toInt()-1])
             //stloc
                 "stloc",
                 "stloc.s"   -> stloc(cmd.argument.toInt())
@@ -419,18 +518,27 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
                 "stloc.1"   -> stloc(1)
                 "stloc.2"   -> stloc(2)
                 "stloc.3"   -> stloc(3)
+            //fld
+                "stfld"     -> stfld(cmd.argument)
+                "ldfld"     -> ldfld(cmd.argument)
             //
                 "call"      -> call(cmd.argument)
+                "callvirt"  -> callvirt(cmd.argument)
                 "pop"       -> pop()
             //TODO: допилить
                 "ret"       -> {
-                    return
+                    if (!_stack.isEmpty()){
+                        return _stack.pop()
+                    }else{
+                        return null
+                    }
                 }
                 else        -> {
                     println("cil>> UNSUPPORTED OPERATION @$pos: ${cmd.operation} ARGUMENT: ${cmd.argument}")
                 }
             }
         }
+        return null //unreachable
     }
     private fun labelToIndex(src : String) : Int{
         return src.removePrefix("IL_").toInt(16)

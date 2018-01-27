@@ -29,4 +29,7 @@ class Stack(maxStack : Int){
     fun isEmpty() : Boolean{
         return(_pointer < 0)
     }
+    fun storedNum() : Int{
+        return _pointer +1
+    }
 }

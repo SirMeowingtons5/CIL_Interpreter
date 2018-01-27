@@ -2,7 +2,8 @@ import cil.Instance
 import ildasm.Parser
 
 fun main(args: Array<String>){
-    val path = System.getProperty("user.dir")+"\\test\\extending.txt"
+
+    val path = System.getProperty("user.dir")+"\\test\\classes.txt"
     val parser = Parser()
     parser.parse(path)
 
@@ -11,4 +12,3 @@ fun main(args: Array<String>){
     println("cil>>FINISHED")
 
 }
-

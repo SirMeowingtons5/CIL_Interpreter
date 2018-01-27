@@ -15,7 +15,9 @@ class Class(val name : String){
         return _methods[name]!!.create()
     }
     fun addField(name : String){
-        _fields.put(name, 0)
+        if(!_fields.containsKey(name)) {
+            _fields.put(name, 0)
+        }
     }
     private fun setFields(fields : HashMap<String, Any>){
         _fields.clear()
@@ -28,14 +30,24 @@ class Class(val name : String){
     fun ldfld(name : String) : Any{
         return _fields[name]!!
     }
-    fun callvirt(){
-        //TODO : implement
+    fun call(methodName: String, args: ArrayList<Any>) : Any?{
+        return _methods.get(methodName)!!.run(args)
+    }
+    fun callvirt(methodName: String, args : ArrayList<Any>) : Any?{
+        return call(methodName, args)
+    }
+
+    fun extend(name : String){
+        val parent = Instance.getClass(name)
+        _methods.putAll(parent._methods)
+        _fields.putAll(parent._fields)
     }
 
     fun create() : Class{
         val res = Class(name)
         res.setMethods(_methods)
         res.setFields(_fields)
+        res._methods.forEach { t, u -> u.setClassInstance(res) }
         return res
     }
 
