@@ -1,65 +1,114 @@
-package ILDASM
+package ildasm
 
-import CIL.Command
+import cil.Command
+import cil.Instance
+import cil.Method
 import java.io.FileInputStream
 
 
-class Parser {
+class Parser{
+    private val ildasmPath = System.getProperty("user.dir")+"\\ildasm\\ildasm.exe"
     /**
-     * group 1 - full method title with name and attributes
-     * group 4 - method name
-     * group 5 - method body, needs trimming to curve closing bracket, watch getMethod implementation
+     * group 1 - access modifier (public or private)
+     * group 2 - class name
+     * group 3 - parent class
+     * group 4 - body without curved braces
      */
-    //private val methodRegex = Regex("\\.method (([a-zA-Z])+ )+ ([a-zA-Z]+)")
-    private val methodRegex = Regex("\\.method (([a-zA-Z])+ )+ (([a-zA-Z]+).*)\\s*((.*\r\n)*)",
+    private val classRegex = Regex(
+            "\\.class (private|public) auto ansi beforefieldinit (.*)\r\n\\s*extends" +
+                    "\\s(.*)\r\n\\{([\\s\\S]*?(?=^}))}",
             RegexOption.MULTILINE)
+
+    /**
+     * group 0 - full method
+     * group 1 - method title (modifiers, name, args)
+     * group 2 - access modifier
+     * group 4 - name
+     * group 5 - arguments
+     * group 6 - body
+     */
+    private val methodRegex = Regex(
+            "(\\.method (public|private) (\\w*\\s[\r\n]*)*([.a-zA-Z0-9]*)" +
+                    "\\(([\\s\\S]*?)\\) cil managed\\s*)\\{([\\s\\S]+?(?=\\s*}))}",
+            RegexOption.MULTILINE)
+    /**
+     * group 0 - entire command
+     * group 1 - command index in hex
+     * group 2 - command name
+     * group 3 - (optional) command argument (needs whitespace trimming at start)
+     * group 4 - (optional) multiline command argument (need whitespaces trimming, see realisation)
+     */
+    private val commandRegex = Regex(
+            "IL_([\\da-f]*):\\s+([\\w.]*)(.*)(\r\n\\s*\\w*\\))*",
+            RegexOption.MULTILINE)
+
+    private val fieldRegex = Regex("\\.field [a-zA-Z ]* (\\w*)")
     /**
      * group 1 - Stack size number
      */
     private val maxstackRegex = Regex("\\.maxstack\\s*(\\d*)")
-    /**
-     * group 0 - full line
-     * group 1 - IL index in hex
-     * group 3 - command
-     * group 5 - argument (size 1 if empty)
-     */
-    private val commandRegex = Regex("IL_((\\d|[a-f])*):\\s*(([a-z]|\\d|\\.)*)(\\s*(.*))?")
 
     private val localsRegex = Regex("V_(\\d*)")
+    private val entrypointRegex = Regex("^\\s*.entrypoint")
 
 
-    private fun readFromFile(filePath: String) : String{
+    private fun readFile(filePath: String) : String{
         val input = FileInputStream(filePath)
         val inputAsString = input.bufferedReader().use { it.readText() }
         return inputAsString
     }
-
-    fun getMethod(fileName: String) : CIL.Interpreter{
-        val programText = readFromFile(fileName)
-        val methodName = methodRegex.find(programText)?.groupValues?.get(4) ?: "nullName"
-        val methodBody = methodRegex.find(programText)?.groupValues?.get(5)?.
-                substringAfter("{")?.substringBefore("}") ?: "nullBody"
-        val maxStack = maxstackRegex.find(methodBody)?.groupValues?.get(1)?.toInt() ?: 0
-        val localsBody = methodBody.substringAfter(".locals init (").substringBefore(")")
-        val localsSequence = localsRegex.findAll(localsBody)
-        val maxLocals : Int
-        if (localsSequence.count() > 0) {
-            maxLocals = localsSequence.last().groupValues.get(1).toInt() + 1
-        }else{
-            maxLocals = 0
-        }
-        val cil = CIL.Interpreter(maxStack, maxLocals)
-
-        val commands = methodBody.split("\n")
-        commands.forEach { commandRegex.find(it)?.groupValues?.let{
-            if(it.get(5).length > 1) {
-                cil.addCommand(it.get(1).toInt(16), Command(it.get(3), it.get(6)))
-            }else{
-                cil.addCommand(it.get(1).toInt(16), Command(it.get(3)))
-            }
-        } }
-
-        return cil
+    private fun convert(inFilePath: String){
+        val pathToDirectory = inFilePath.substringBeforeLast("\\")+"\\"
+        val fileName = inFilePath.substringAfterLast("\\").substringBeforeLast(".")
+        val outFilePath = "$pathToDirectory$fileName.txt"
+        Runtime.getRuntime().exec("$ildasmPath /text $inFilePath /out=$outFilePath")
+        //pause to give ildasm time to create file
+        Thread.sleep(2_000)
     }
 
+    fun parse(filePath: String){
+        val listing = readFile(filePath)
+        classRegex.findAll(listing).forEach {
+            val cls = cil.Class(it.groupValues[2])
+            //adding fields
+            fieldRegex.findAll(it.groupValues[4]).forEach {
+                cls.addField(it.groupValues[1])
+            }
+            //adding methods
+            methodRegex.findAll(it.groupValues[4]).forEach {
+                val method : Method
+                val args = it.groupValues[5]
+                        .replace(Regex("\\s+"), " ")
+                        .replace(Regex("\\w+$"), "")
+                        .replace(Regex("\\s+\\w+,"), ",")
+                        .trim()
+                val methodName = "${it.groupValues[4]}($args)"
+                val maxStack = maxstackRegex.find(it.groupValues[6])?.groupValues?.get(1)?.toInt() ?: 0
+                val localsSequence = localsRegex.findAll(it.groupValues[6])
+                val maxLocals = if (localsSequence.count() > 0){
+                    localsSequence.last().groupValues[1].toInt()+1
+                }else{
+                    0
+                }
+                method = Method(maxStack, maxLocals, methodName, cls)
+                commandRegex.findAll(it.groupValues[6]).forEach {
+                    val command : Command
+                    val index = it.groupValues[1].toInt(16)
+                    val operation = it.groupValues[2]
+                    val argument : String = it.groupValues[3]
+                            .plus(it.groupValues[4]
+                                    .replace(Regex("\\s+"), " "))
+                            .trim()
+                    command = Command(operation, argument)
+                    method.addCommand(index, command)
+                }
+                if (it.groupValues[6].contains(entrypointRegex)){
+                    println("entrypoint at ${cls.name}::${method.name}")
+                    Instance.setEntryMethod(method)
+                }
+                cls.addMethod(method)
+            }
+            Instance.addClass(cls.name, cls)
+        }
+    }
 }

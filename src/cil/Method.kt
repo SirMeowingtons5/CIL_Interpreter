@@ -1,22 +1,34 @@
-package CIL
+package cil
 
-    val maxOperations = 0x100
-class Interpreter(maxStack : Int, maxLocals : Int, methodName : String){
-    public val name : String
-    private val _stack : Stack
+
+class Method(private val maxStack : Int, private val maxLocals : Int, val name : String,
+             private val parentClass : Class){
+    private val _maxOperations = 0x100
+    private val _stack : Stack = Stack(maxStack)
     private val _heap = ArrayList<Any>()
-    private val _locals : Array<Any>
+    private val _locals : Array<Any> = Array(maxLocals, {0})
     private val _commands : Array<Command>
 
     init {
-        _stack = Stack(maxStack)
-        _locals = Array(maxLocals, {0})
-        _commands = Array(maxOperations, { Command("nop") })
-        name = methodName
+        _commands = Array(_maxOperations, { Command("nop", "") })
+    }
+
+    /**
+     * Returns new instance of Method
+     * Further realisation for static methods
+     */
+    fun create() : Method{
+        val res = Method(maxStack, maxLocals, name, parentClass)
+        res.setCommands(_commands)
+        return res
     }
 
     fun addCommand (index : Int, command : Command){
         _commands[index] = command
+    }
+    private fun setCommands(commands : Array<Command>){
+        for (i in 0 until _maxOperations)
+            _commands[i] = commands[i]
     }
 
     /**
@@ -44,16 +56,14 @@ class Interpreter(maxStack : Int, maxLocals : Int, methodName : String){
      * Divides two values to return a floating-point result.
      */
     private fun div(){
-        val value2 : Double
-        val value1 : Double
-        if (_stack.peek() is Int)
-            value2 = (_stack.pop() as Int).toDouble()
+        val value2 : Double = if (_stack.peek() is Int)
+            (_stack.pop() as Int).toDouble()
         else
-            value2 = _stack.pop() as Double
-        if (_stack.peek() is Int)
-            value1 = (_stack.pop() as Int).toDouble()
+            _stack.pop() as Double
+        val value1 : Double = if (_stack.peek() is Int)
+            (_stack.pop() as Int).toDouble()
         else
-            value1 = _stack.pop() as Double
+            _stack.pop() as Double
         _stack.push(value1 / value2)
     }
 
@@ -319,7 +329,7 @@ class Interpreter(maxStack : Int, maxLocals : Int, methodName : String){
      */
     fun run(){
         var pos = 0
-        while (pos < maxOperations){
+        while (pos < _maxOperations){
             val cmd = _commands[pos]
             pos++
             when (cmd.operation){
