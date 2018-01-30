@@ -2,13 +2,12 @@ import cil.Instance
 import ildasm.Parser
 
 fun main(args: Array<String>){
-
-    val path = System.getProperty("user.dir")+"\\test\\classes2.txt"
+    println("Enter filename without extension (i.e. test instead of test.exe)")
+    val fileName = readLine() ?: "HelloWorld"
     val parser = Parser()
-    parser.parse(path)
+    parser.parse(fileName)
 
-    println("cil>>STARTING")
+    println("cil>>STARTED")
     Instance.run()
     println("cil>>FINISHED")
-
 }

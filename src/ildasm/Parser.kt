@@ -3,11 +3,13 @@ package ildasm
 import cil.Command
 import cil.Instance
 import cil.Method
+import java.io.File
 import java.io.FileInputStream
 
 
 class Parser{
-    private val ildasmPath = System.getProperty("user.dir")+"\\ildasm\\ildasm.exe"
+    private val ildasmDirectory = System.getProperty("user.dir")+"\\ildasm\\"
+    private val ildasmPath = ildasmDirectory+"ildasm.exe"
     /**
      * group 1 - access modifier (public or private)
      * group 2 - class name
@@ -38,11 +40,6 @@ class Parser{
      * group 3 - (optional) command argument (needs whitespace trimming at start)
      * group 4 - (optional) multiline command argument (need whitespaces trimming, see realisation)
      */
-    //TODO: add 3+ args support
-    /*private val commandRegex = Regex(
-            "IL_([\\da-f]*):\\s+([\\w.]*)(.*)(\r\n\\s*\\w*\\))*",
-            RegexOption.MULTILINE)*/
-
     private val commandRegex = Regex("IL_([\\da-f]*):\\s+([\\w.]*)\\s*?((,\r\n|[^\r\n])*)")
 
     private val fieldRegex = Regex("\\.field [a-zA-Z ]* (\\w*)")
@@ -63,22 +60,29 @@ class Parser{
     private val callRegex = Regex("([^\\s]*)::[.|\\w]*\\((.*)\\)")
 
 
-    private fun readFile(filePath: String) : String{
+    private fun readFile(fileName: String) : String{
+        val filePath = "$ildasmDirectory$fileName.txt"
         val input = FileInputStream(filePath)
         val inputAsString = input.bufferedReader().use { it.readText() }
         return inputAsString
     }
-    private fun convert(inFilePath: String){
-        val pathToDirectory = inFilePath.substringBeforeLast("\\")+"\\"
-        val fileName = inFilePath.substringAfterLast("\\").substringBeforeLast(".")
-        val outFilePath = "$pathToDirectory$fileName.txt"
+    private fun convert(fileName: String){
+        val inFilePath = "$ildasmDirectory$fileName.exe"
+        val outFilePath = "$ildasmDirectory$fileName.txt"
+        val file = File(outFilePath)
+        if (file.exists()){
+            file.delete()
+        }
         Runtime.getRuntime().exec("$ildasmPath /text $inFilePath /out=$outFilePath")
-        //pause to give ildasm time to create file
-        Thread.sleep(2_000)
+        do{
+            //pause to give ildasm time to create file
+            Thread.sleep(500)
+        }while(!file.exists())
     }
 
-    fun parse(filePath: String){
-        val listing = readFile(filePath)
+    fun parse(fileName: String){
+        convert(fileName)
+        val listing = readFile(fileName)
         classRegex.findAll(listing).forEach {
             val cls = cil.Class(it.groupValues[2])
             //adding fields
