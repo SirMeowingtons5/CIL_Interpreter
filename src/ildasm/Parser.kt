@@ -38,11 +38,12 @@ class Parser{
      * group 3 - (optional) command argument (needs whitespace trimming at start)
      * group 4 - (optional) multiline command argument (need whitespaces trimming, see realisation)
      */
-
     //TODO: add 3+ args support
-    private val commandRegex = Regex(
+    /*private val commandRegex = Regex(
             "IL_([\\da-f]*):\\s+([\\w.]*)(.*)(\r\n\\s*\\w*\\))*",
-            RegexOption.MULTILINE)
+            RegexOption.MULTILINE)*/
+
+    private val commandRegex = Regex("IL_([\\da-f]*):\\s+([\\w.]*)\\s*?((,\r\n|[^\r\n])*)")
 
     private val fieldRegex = Regex("\\.field [a-zA-Z ]* (\\w*)")
     /**
@@ -106,8 +107,7 @@ class Parser{
                     val index = it.groupValues[1].toInt(16)
                     val operation = it.groupValues[2]
                     val argument : String = it.groupValues[3]
-                            .plus(it.groupValues[4]
-                                    .replace(Regex("\\s+"), " "))
+                            .replace(Regex("\\s+"), " ")
                             .trim()
                     command = Command(operation, argument)
                     method.addCommand(index, command)
