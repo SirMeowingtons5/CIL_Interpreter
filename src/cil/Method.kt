@@ -1,13 +1,10 @@
 package cil
 
+import ildasm.Parser
+
 
 class Method(private val maxStack : Int, private val maxLocals : Int, val name : String,
              private var classInstance: Class){
-
-
-
-
-
     private val _maxOperations = 0x100
     private val _stack : Stack = Stack(maxStack)
     //private val _heap = ArrayList<Any>()
@@ -183,20 +180,16 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
     private fun ldstr(value : String){
         val parsedValue = value.removePrefix("\"").removeSuffix("\"")
         if (Instance.heap.contains(parsedValue)){
-            _stack.push(Instance.heap.indexOf(parsedValue))
+            _stack.push(Pointer(Instance.heap.indexOf(parsedValue)))
         }else {
             _stack.push(Pointer(Instance.heap.size))
             Instance.heap.add(parsedValue)
         }
     }
     private fun ldarg_0(){
-        if (Instance.heap.contains(classInstance)) {
-            _stack.push(Instance.heap.indexOf(classInstance))
-        }else {
-            _stack.push(Instance.heap.size)
-            Instance.heap.add(classInstance)
-        }
+        _stack.push(classInstance.getSelfPointer())
     }
+
     private fun stfld(name : String){
         val fieldName = name.substringAfterLast(" ")
         classInstance.stfld(fieldName, _stack.pop())
@@ -213,7 +206,7 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
         if (methodName.substringAfter("(").substringBefore(")").length == 0) {
             argsNumber = 0
         }else{
-            //get number of args by couting commas, +1 cause 0 commas means 1 arg, 1 comma means 2 args etc.
+            //get number of args by couting commas
             argsNumber = methodName
                     .substringBefore("(").substringAfter(")").split(",").size
 
@@ -222,7 +215,7 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
         for (i in 1..argsNumber){
             args.add(_stack.pop())
         }
-        _stack.push(Instance.getClass(className).create().call(methodName, args)!!)
+        _stack.push(Instance.getClass(className).create().call(methodName, args) as Any)
     }
     /**
      * Pops the current value from the top of the evaluation stack
@@ -252,10 +245,9 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
             }
             "void [mscorlib]System.Console::WriteLine(string)" ->{
                 val index = (_stack.pop() as Pointer).getIndex()
-                println(Instance.heap.get(index) as String)
+                println("cil>>WRITELINE:${Instance.heap.get(index) as String}")
             }
             "string [mscorlib]System.Console::ReadLine()" ->{
-                //TODO: чекнуть
                 print("cil>>READLINE:")
                 ldstr(readLine() ?: "всё сломалось, зовите фиксиков")
             }
@@ -276,8 +268,12 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
 
         }
     }
+    //fix for multiple args
     private fun callvirt(arg : String){
-        val methodName = arg.substringAfterLast(" ")
+        val p = Parser()
+        val methodName = p.getCallMethodName(arg)
+        val argsNumber = p.getCallMethodArgsNum(arg)
+        /*val methodName = arg.substringAfterLast(" ")
         val argsNumber : Int
         if (methodName.substringAfter("(").substringBefore(")").length == 0) {
             argsNumber = 0
@@ -286,20 +282,15 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
             argsNumber = methodName
                     .substringBefore("(").substringAfter(")").split(",").size
 
-        }
+        }*/
         val args = ArrayList<Any>()
         for (i in 1..argsNumber){
             args.add(_stack.pop())
         }
-        //val pointer = _stack.pop() as Pointer
-        val pointer = _stack.pop() as Int
-        try {
-            val res = (Instance.heap[pointer] as Class).callvirt(methodName, args)
-        }catch (e : Exception){
-            //DAFUQ?!
-            //println("ERROR: ${Instance.heap[pointer]}")
-        }
-        val res = 1
+        val pointer = _stack.pop() as Pointer
+        val cls = Instance.heap[pointer.getIndex()] as Class
+
+        val res = cls.callvirt(methodName, args)
         if (res != null && !arg.substringBeforeLast(" ").contains("void")){
             _stack.push(res)
         }
@@ -317,10 +308,11 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
      * from the callee's evaluation stack onto the caller's evaluation stack.
      */
     private fun ret() : Any?{
-        //TODO: реализовать
-        if (_stack.isEmpty())
+        if (!_stack.isEmpty()){
+            return _stack.pop()
+        }else{
             return null
-        else return (_stack.pop())
+        }
     }
 
     /**
@@ -332,7 +324,7 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
 
     /*
      *
-     * Переходы
+     * Jumps
      *
      */
 
@@ -395,22 +387,10 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
         return (_stack.pop() as Int == 0)
     }
 
-    /**
-     * Класс-обёртка для указателя
-     */
-    private class Pointer(index : Int){
-        private val _index : Int
-        init{
-            _index = index
-        }
-        fun getIndex() : Int{
-            return _index
-        }
-    }
 
 
     /**
-     * Метод-интерпретатор
+     * Interpreter method
      */
     fun run(args : ArrayList<Any>) : Any?{
         var pos = 0
@@ -419,7 +399,7 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
             pos++
             //TODO: remove
             if(cmd.operation != "nop") {
-                //println("$pos ${cmd.operation} ${cmd.argument} [${_stack.storedNum()}/$maxStack]")
+                //println("${pos.toString(16)}) ${cmd.operation} ${cmd.argument} [${_stack.storedNum()}/$maxStack]")
             }
             when (cmd.operation){
                 "nop"       -> nop()
@@ -525,14 +505,8 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
                 "call"      -> call(cmd.argument)
                 "callvirt"  -> callvirt(cmd.argument)
                 "pop"       -> pop()
-            //TODO: допилить
-                "ret"       -> {
-                    if (!_stack.isEmpty()){
-                        return _stack.pop()
-                    }else{
-                        return null
-                    }
-                }
+            //
+                "ret"       -> return ret()
                 else        -> {
                     println("cil>> UNSUPPORTED OPERATION @$pos: ${cmd.operation} ARGUMENT: ${cmd.argument}")
                 }

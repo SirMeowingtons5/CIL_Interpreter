@@ -39,7 +39,7 @@ class Parser{
      * group 4 - (optional) multiline command argument (need whitespaces trimming, see realisation)
      */
 
-    //TODO: fix for 3+ args
+    //TODO: add 3+ args support
     private val commandRegex = Regex(
             "IL_([\\da-f]*):\\s+([\\w.]*)(.*)(\r\n\\s*\\w*\\))*",
             RegexOption.MULTILINE)
@@ -52,6 +52,14 @@ class Parser{
 
     private val localsRegex = Regex("V_(\\d*)")
     private val entrypointRegex = Regex("^\\s*.entrypoint")
+
+
+    /**
+     * Regex for parcing call / callvirt args
+     * group 0 - full method name with args
+     * group 2 - args only
+     */
+    private val callRegex = Regex("([^\\s]*)::[.|\\w]*\\((.*)\\)")
 
 
     private fun readFile(filePath: String) : String{
@@ -105,7 +113,6 @@ class Parser{
                     method.addCommand(index, command)
                 }
                 if (it.groupValues[6].contains(entrypointRegex)){
-                    println("entrypoint at ${method.name}")
                     Instance.setEntryMethod(method)
                 }
                 cls.addMethod(method)
@@ -114,6 +121,19 @@ class Parser{
                 cls.extend(it.groupValues[3])
             }
             Instance.addClass(cls.name, cls)
+        }
+    }
+
+    fun getCallMethodName(source : String) : String{
+        val res = callRegex.find(source)?.groupValues?.get(0) ?: "NULL"
+        return res
+    }
+    fun getCallMethodArgsNum(source: String) : Int{
+        val str = callRegex.find(source)?.groupValues?.get(2) ?: ""
+        if (str.length == 0){
+            return 0
+        }else{
+            return str.split(",").size
         }
     }
 }

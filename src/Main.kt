@@ -3,7 +3,7 @@ import ildasm.Parser
 
 fun main(args: Array<String>){
 
-    val path = System.getProperty("user.dir")+"\\test\\classes.txt"
+    val path = System.getProperty("user.dir")+"\\test\\classes3.txt"
     val parser = Parser()
     parser.parse(path)
 
