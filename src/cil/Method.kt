@@ -5,10 +5,11 @@ import ildasm.Parser
 
 class Method(private val maxStack : Int, private val maxLocals : Int, val name : String,
              private var classInstance: Class){
+    //null dummy object
+    private val nullObject = Pointer(-1)
     private val _maxOperations = 0x100
     private val _stack : Stack = Stack(maxStack)
-    //private val _heap = ArrayList<Any>()
-    private val _locals : Array<Any> = Array(maxLocals, {0})
+    private val _locals : Array<Any> = Array(maxLocals, {nullObject})
     private val _commands : Array<Command>
 
     init {
@@ -232,11 +233,24 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
         _stack.push(_locals[index])
     }
 
+    //TODO: add
+    private fun ldnull(){
+        _stack.push(nullObject)
+    }
+    //TODO: add
+    private fun dup(){
+        _stack.push(_stack.peek())
+    }
+
     /**
      * Calls the method indicated by the passed method descriptor.
      */
     private fun call(funcName : String){
         when (funcName){
+            "int32 [mscorlib]System.Int32::Parse(string)"   ->{
+                val str = Instance.heap[(_stack.pop() as Pointer).getIndex()] as String
+                _stack.push(str.toInt())
+            }
             "void [mscorlib]System.Console::WriteLine(int32)" ->{
                 println((_stack.pop() as Int).toString())
             }
@@ -455,6 +469,8 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
             //
                 "ceq"       -> ceq()
                 "cgt"       -> cgt()
+                //TODO: add
+                "cgt.un"    -> cgt()
                 "clt"       -> clt()
             //
                 "conv.r8"   -> conv_r8()
@@ -507,6 +523,9 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
                 "pop"       -> pop()
             //
                 "ret"       -> return ret()
+            //new
+                "dup"       -> dup()
+                "ldnull"    -> ldnull()
                 else        -> {
                     println("cil>> UNSUPPORTED OPERATION @$pos: ${cmd.operation} ARGUMENT: ${cmd.argument}")
                 }

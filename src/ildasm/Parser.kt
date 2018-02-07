@@ -21,7 +21,7 @@ class Parser{
                     "\\s(.*)\r\n\\{([\\s\\S]*?(?=^}))}",
             RegexOption.MULTILINE)
 
-    /**
+    /*
      * group 0 - full method
      * group 1 - method title (modifiers, name, args)
      * group 2 - access modifier
@@ -29,10 +29,16 @@ class Parser{
      * group 5 - arguments
      * group 6 - body
      */
+
+    //TODO: TEST
     private val methodRegex = Regex(
+            "(\\.method (public|private) (\\.?\\w*\\s*[\r\n]*)*?([\\w.]*)\\(([\\s\\S]*?)\\)" +
+            " cil managed\\s*)\\{([\\s\\S]+?(?=\\s*}))}",
+            RegexOption.MULTILINE)
+    /*private val methodRegex = Regex(
             "(\\.method (public|private) (\\w*\\s[\r\n]*)*([.a-zA-Z0-9]*)" +
                     "\\(([\\s\\S]*?)\\) cil managed\\s*)\\{([\\s\\S]+?(?=\\s*}))}",
-            RegexOption.MULTILINE)
+            RegexOption.MULTILINE)*/
     /**
      * group 0 - entire command
      * group 1 - command index in hex
@@ -119,6 +125,7 @@ class Parser{
                 if (it.groupValues[6].contains(entrypointRegex)){
                     Instance.setEntryMethod(method)
                 }
+                //println(method.name)
                 cls.addMethod(method)
             }
             if(it.groupValues[3] != "[mscorlib]System.Object") {
