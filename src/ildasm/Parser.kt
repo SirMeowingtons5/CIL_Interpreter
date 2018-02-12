@@ -48,7 +48,12 @@ class Parser{
      */
     private val commandRegex = Regex("IL_([\\da-f]*):\\s+([\\w.]*)\\s*?((,\r\n|[^\r\n])*)")
 
-    private val fieldRegex = Regex("\\.field [a-zA-Z ]* (\\w*)")
+
+    private val fieldRegex = Regex(
+            "\\.field\\s.*\\s([_.\\w]+)\$",
+            RegexOption.MULTILINE)
+    //TODO: fix
+//    private val fieldRegex = Regex("\\.field [a-zA-Z ]* (\\w*)")
     /**
      * group 1 - Stack size number
      */

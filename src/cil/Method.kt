@@ -1,12 +1,12 @@
 package cil
 
+import cil.Instance.nullObject
 import ildasm.Parser
 
 
 class Method(private val maxStack : Int, private val maxLocals : Int, val name : String,
              private var classInstance: Class){
     //null dummy object
-    private val nullObject = Pointer(-1)
     private val _maxOperations = 0x100
     private val _stack : Stack = Stack(maxStack)
     private val _locals : Array<Any> = Array(maxLocals, {nullObject})
@@ -95,12 +95,13 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
     }
 
     private fun sub(){
+        //fixed
         var value2 : Any = _stack.pop()
         var value1 : Any = _stack.pop()
 
         //both are int
         if (value1 is Int && value2 is Int){
-            _stack.push(value2 - value1)
+            _stack.push(value1 - value2)
             //one is double so result is double
         }else{
             if (value1 is Int){
@@ -108,7 +109,7 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
             }
             if (value2 is Int)
                 value2 = value2.toDouble()
-            _stack.push(value2 as Double - value1 as Double)
+            _stack.push(value1 as Double - value2 as Double)
         }
     }
 
@@ -133,12 +134,38 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
      * otherwise 0 is pushed onto the evaluation stack.
      */
     private fun cgt(){
-        val value2 = _stack.pop() as Int
+        //TODO: rewrite
+        val value2 : Int
+        val value1 : Int
+        if (_stack.peek() == nullObject){
+            _stack.pop()
+            value2 = Int.MIN_VALUE
+        }else if (_stack.peek() is Pointer){
+            _stack.pop()
+            value2 = 1
+        }else{
+            value2 = _stack.pop() as Int
+        }
+        if (_stack.peek() == nullObject){
+            _stack.pop()
+            value1 = Int.MIN_VALUE
+        }else if (_stack.peek() is Pointer){
+            _stack.pop()
+            value1 = 1
+        }else{
+            value1 = _stack.pop() as Int
+        }
+        if (value1 > value2){
+            _stack.push(1)
+        }else{
+            _stack.push(0)
+        }
+        /*val value2 = _stack.pop() as Int
         val value1 = _stack.pop() as Int
         if (value1 > value2)
             _stack.push(1)
         else
-            _stack.push(0)
+            _stack.push(0)*/
     }
 
     /**
@@ -191,18 +218,24 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
         _stack.push(classInstance.getSelfPointer())
     }
 
+    //TODO: fix
+    //uses 2 args
     private fun stfld(name : String){
+        val item = _stack.pop()
+        val cls = Instance.heap[(_stack.pop() as Pointer).getIndex()] as Class
         val fieldName = name.substringAfterLast(" ")
-        classInstance.stfld(fieldName, _stack.pop())
+        cls.stfld(fieldName, item)
     }
     private fun ldfld(name : String){
+        val classSrc = Instance.heap[(_stack.pop() as Pointer).getIndex()] as Class
         val fieldName = name.substringAfterLast(" ")
-        _stack.push(classInstance.ldfld(fieldName))
+        _stack.push(classSrc.ldfld(fieldName))
     }
 
     private fun newobj(arg : String){
         val className = arg.substringBefore("::").substringAfterLast(" ")
-        val methodName = arg.substringAfterLast(" ")
+        //val methodName = arg.substringAfterLast(" ")
+        val methodName = className + "::" + arg.substringAfter("::")
         val argsNumber : Int
         if (methodName.substringAfter("(").substringBefore(")").length == 0) {
             argsNumber = 0
@@ -216,7 +249,9 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
         for (i in 1..argsNumber){
             args.add(_stack.pop())
         }
-        _stack.push(Instance.getClass(className).create().call(methodName, args) as Any)
+        val newClass = Instance.createClass(className);
+        newClass.call(methodName, args)
+        _stack.push(newClass.getSelfPointer())
     }
     /**
      * Pops the current value from the top of the evaluation stack
@@ -225,12 +260,20 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
     private fun stloc(index: Int){
         _locals[index] = _stack.pop()
     }
+    private fun stloc_s(arg: String){
+        val index = arg.removePrefix("V_").toInt()
+        stloc(index)
+    }
 
     /**
      * Loads the local variable at a specific index onto the evaluation stack.
      */
     private fun ldloc(index: Int){
         _stack.push(_locals[index])
+    }
+    private fun ldloc_s(arg: String){
+        val index = arg.removePrefix("V_").toInt()
+        ldloc(index)
     }
 
     //TODO: add
@@ -398,7 +441,13 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
      * Transfers control to a target instruction if value is false, a null reference, or zero.
      */
     private fun brfalse() : Boolean{
-        return (_stack.pop() as Int == 0)
+        val res = _stack.pop()
+        when (res) {
+            is Int -> return res == 0
+            is Pointer -> return res == nullObject
+            else -> return false
+        }
+        //return (_stack.pop() as Int == 0)
     }
 
 
@@ -413,7 +462,8 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
             pos++
             //TODO: remove
             if(cmd.operation != "nop") {
-                //println("${pos.toString(16)}) ${cmd.operation} ${cmd.argument} [${_stack.storedNum()}/$maxStack]")
+                //println("${pos.toString(16)}) ${cmd.operation} ${cmd.argument} [${_stack.storedNum()}/$maxStack] $name")
+                //println("${(pos-1).toString(16)}) ${cmd.operation} ${cmd.argument}")
             }
             when (cmd.operation){
                 "nop"       -> nop()
@@ -491,8 +541,8 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
             //newobj
                 "newobj"    -> newobj(cmd.argument)
             //ldloc
-                "ldloc",
-                "ldloc.s"   -> ldloc(cmd.argument.toInt())
+                "ldloc"     -> ldloc(cmd.argument.toInt())
+                "ldloc.s"   -> ldloc_s(cmd.argument)
                 "ldloc.0"   -> ldloc(0)
                 "ldloc.1"   -> ldloc(1)
                 "ldloc.2"   -> ldloc(2)
@@ -508,8 +558,8 @@ class Method(private val maxStack : Int, private val maxLocals : Int, val name :
                 "ldarga",
                 "ldargs"    -> _stack.push(args[cmd.argument.toInt()-1])
             //stloc
-                "stloc",
-                "stloc.s"   -> stloc(cmd.argument.toInt())
+                "stloc"     -> stloc(cmd.argument.toInt())
+                "stloc.s"   -> stloc_s(cmd.argument)
                 "stloc.0"   -> stloc(0)
                 "stloc.1"   -> stloc(1)
                 "stloc.2"   -> stloc(2)
